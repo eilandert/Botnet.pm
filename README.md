@@ -1,8 +1,6 @@
 
-This is a SpamAssassin module. Cloned to githubed for archieving purposes.
-
+This is a SpamAssassin module. Comitted to github for archieving purposes.
 Version 0.8, It has a patched Botnet.pm for IPv6. Works on 3.4.0
-
 I might pick this one up one day, since the original author seems to have 
 abandonded it.
 

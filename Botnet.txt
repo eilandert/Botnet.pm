@@ -1,0 +1,142 @@
+Plugin:   Botnet
+
+   Botnet looks for possible botnet sources of email by checking
+various DNS values that indicate things such as other ISP's clients or
+workstations, or misconfigured DNS settings that are more likely to happen
+with client or workstation addresses than servers.
+
+Botnet looks in the Untrusted Relays pseudoheader.  It defaults to
+looking at the first relay in that list.  However, certain options allow
+it to skip past relays in that list (or not score a hit if it finds certain
+relays).
+
+Installing:
+   Copy Botnet.pm and Botnet.cf into /etc/mail/spamassassin (or whatever
+   directory you use for your plugins).  If you use something like
+   spamc/spamd, mailscanner, or a milter, you probably need to restart
+   that.  From there, it should "just work".
+
+
+Rule:   BOTNET_NORDNS
+   The relay has no PTR record (no reverse dns).  This rule does NOT incur
+a DNS check, as Botnet obtains this invormation from the rdns= field in
+SpamAssassin's Untrusted Relays pseudo-header.
+
+Rule:   BOTNET_BADDNS
+   The relay doesn't have a full circle DNS.  Full circle DNS means that,
+starting with the relay's IP address, going to its PTR record, and then
+looking at the IPs returned from that hostname's A record, is the relay's
+IP address in that group if addresses?  If it isn't, then there's probably
+a DNS forgery.
+   Note: BOTNET_BADDNS causes Botnet to do a DNS lookup.  This can be time
+consuming for your SpamAssassin Checks.
+
+Rule:   BOTNET_IPINHOSTNAME
+   Does the relay's hostname contain 2 or more octets of its IP address
+within the hostname?  They can be in decimal or hexadecimal format.  Each
+octet can have leading zeroes, or a single separator character.
+
+Rule:   BOTNET_CLIENTWORDS
+   Does the relay's hostname contain certain keywords that look like a
+client hostname?  They can be any keywords, but the included list is intended
+to identify ISP end clients and dynamic workstations.
+
+Rule:   BOTNET_SERVERWORDS
+   Does the relay's hostname contain certain keywords that look like a mail
+server hostname?  They can be any keywords, but the included list is intended
+to identify exceptions to the BOTNET_IPINHOSTNAME and BOTNET_CLIENTWORDS
+checks, that might indicate they actually are legitimate mail servers.
+
+Rule:   BOTNET_CLIENT
+   This rule duplicates the checks in BOTNET_IPINHOSTNAME, BOTNET_CLIENTWORDS,
+and BOTNET_SERVERWORDS to decide whether or not the hostname looks
+like a client.
+   It is effectively (!serverwords && (iphostname || clientwords))
+   See Botnet.variants.txt for a way to replace this a meta rule.
+
+Rule:   BOTNET_SOHO
+   This rule checks to see if the relay is possibly a SOHO (small office,
+home office) mail server.  In this case, the sender's mail domain is examined,
+and resolved.  First an A record look up is done, and if the relay's IP
+address is found in the first 5, then BOTNET_SOHO hits.  Second, the same
+check is done on the MX records for the domain, again limited to 5 records.
+These checks are limited to 5 records because a SOHO domain is not likely
+to have a large round-robin A record nor a large number of MX records.  In
+order to avoid having this check used as a back-door by botnet coders, by
+using a throw-away sender domain that has all of its botnet hosts in the
+A records or MX records, BOTNET_SOHO only looks at 5 records.
+
+Rule:   BOTNET
+   This rule duplicates the checks done by the above rules.  
+   The intent is to flag a message automatically for quarantine or storage
+in a spam folder if the message does have the fingerprints of a spambot
+or virusbot, but does NOT have the fingerprints of a server.
+   It is effectively (!soho && (client || baddns || nordns))
+   See Botnet.variants.txt for a way to replace this with a meta rule, or
+replace this with piece-meal rules.
+
+
+Option:   botnet_pass_auth  (1|0)
+   If the untrusted relay being considered performed SMTP-AUTH, (the auth
+field is not empty), then Botnet will not score a hit if this setting is
+non-zero.  Defaults to 0 (off).
+
+Option:   botnet_pass_trusted  (any|public|private|ignore)
+   If there are trusted relays (received headers that match the trusted
+networks, before getting to a received header that doesn't match the
+trusted networks), then pass the message through Botnet without matching
+any rules, IF it matches the critereon of this option.  If the option is
+set to "any", then pass the message if there are any trusted relays.  If
+the option is set to "private", then pass the message if there are any
+relays from localhost and/or RFC-1918 reserved IP addresses (10.*, etc.).
+If the option is set to "public", then pass the message if there are any
+relays that are neither localhost nor RFC-1918 reserved.  If the option
+is set to "ignore" (or, really, anything other than "any", "public", or
+"private"), then ignore the trusted relays.   Defaults to "public".
+
+Option:   botnet_skip_ip (regular-expression)
+   A regular expression that will cause Botnet to move to the NEXT
+untrusted relay if the current one's IP address matches the expression.
+Multiple entries are ORed together.  Multiple entries may be space delimited
+or made with multiple lines.  Defaults to empty (no IPs will be skipped).
+
+Option:   botnet_pass_ip (regular-expression)
+   A regular expression that will cause Botnet to not score a hit
+if the current relay's IP address  matches the expression.  All Botnet tests
+will return 0.  Multiple entries are ORed together. Multiple entries may be
+space delimited or made with multiple lines.  Defaults to empty (no IPs will
+be passed without checking).
+
+Option:   botnet_pass_domains (regular-expression)
+   A regular expression that will cause Botnet to not score a hit if the
+current relay's hostname matches the expression.  The expression is
+automatically anchored with a $, so it will only match the end of the
+hostname, and prepended with "(\.|\A)".  If the relay has RDNS, the expression
+will not match at the beginning nor end of the hostname (carets are removed
+from the expression).  All Botnet tests will return 0 if the RDNS matches
+the expression.  Multiple entries are ORed together. Multiple entries may be
+space delimited or made with multiple lines.  Defaults to empty (no domain
+names will be passed without checking).
+
+Note: if the RDNS owner tricks botnet_pass_domains, by putting these domains
+into their PTR record, then:
+a) it's probably a direct spammer and not a botnet anyway, and
+b) there are other spam assassin rules for dealing with those issues.
+
+
+Option:   botnet_clientwords (regular-expression)
+   Space delimited list of regexps that are indicate an end client or
+dynamic host which should not directly connect to other mail servers
+besides its own provider's.  Multiple entries are ORed together.  Multiple
+entries may be space delimited or made with multiple lines.  Defaults
+to empty (no client word check will be done).  The example cf file comes
+with a basic entry, however.  The expressions will not match against the
+top two domains (the TLD and usually the registed domain).  All word
+expressions have (\b|\d) added to the beginning and end, to ensure they
+are not sub-words of larger words.
+
+Option:   botnet_serverwords (regular-expression)
+   Same as above, but for hostname words that indicate it might NOT
+be a client, but is, instead, an actual mail server.  Such as "mail" or
+"smtp" being in the hostname.
+

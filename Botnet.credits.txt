@@ -1,0 +1,41 @@
+
+People who have given suggestions, bug reports, feedback, and other help
+in the development of the Botnet plugin:
+
+Mark Boolootian
+Terry Figel
+Josh Homan
+Paul Tatarsky
+Jim Warner
+David F. Skoll
+Chris (Pollock?)
+John D. Hardin
+Bret Miller
+Jonas Eckerman
+Tom Shaw
+Craig Morrison
+Patrick Snyers
+Jeff Mincy
+Rob Mangiafico
+Till Klampaeckel
+Loren Wilton
+Daryl C.W. O'Shea
+Mark Martinec
+Dennis Davis
+Bill Landry
+Larry M. Rosenbaum
+Ralf Hildebrandt
+Michael Schaap
+Chris/decoder
+Chris Lear
+Rene Berber
+Billy Huddleston
+Mark Nienberg
+Carlos Horowicz
+Federico Giannici
+Phil Barnett
+Steven Manross
+Dylan Bouterse
+Kosmaj
+Derek Harding
+Michael Alan Dorman

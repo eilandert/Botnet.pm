@@ -1,0 +1,7 @@
+
+Copy the .pm and .cf file(s) in this directory into /etc/mail/spamassassin
+(or whatever directory you put your plugins into).
+
+If you use spamc/spamd, mailscanner, or a milter, you may need to restart
+that process in order for this plugin to get loaded.
+

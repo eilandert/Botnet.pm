@@ -1,0 +1,91 @@
+
+If you want to write perl programs that do the same checks as Botnet, they
+can now be used without having to go through SpamAssassin.  You will need
+to have SpamAssassin installed to get Botnet.pm to load, but other than
+that, you don't have to interact with SpamAssassin.  Here are the perl
+statements that evaluate to the same process as the Botnet checks:
+
+
+Same as BOTNET_NORDNS:
+$hostname = Mail::SpamAssassin::Plugin::Botnet::get_rdns($ip);
+$nordns = ($hostname eq "");
+
+   Given the IP address (without surrounding []'s), will return the
+   hostname contained within the _FIRST_ PTR record it finds for that
+   IP address.
+
+
+Same as BOTNET_BADDNS:
+$baddns =
+   Mail::SpamAssassin::Plugin::Botnet::check_dns($hostname, $ip, "A", -1);
+
+   Returns 1 if $hostname resolves back to $ip.  Otherwise returns 0.
+   The third argument can be set to "MX" to resolve MX records back to
+   an IP address.  Only "A" and "MX" are currently supported.
+   The fourth argument says how many records to look at.  -1 says "all of
+   them".  If you set this to 5, it will only look at 5 records before
+   giving up.  If you set this to 5, and set the record type to "MX", then
+   the only the first 5 MX records are checked, AND for each MX record only
+   the first 5 A records are checked.
+
+
+Same as BOTNET_IPINHOSTNAME:
+$iphost =
+   Mail::SpamAssassin::Plugin::Botnet::check_ipinhostname($hostname, $ip);
+
+   Returns 1 if the hostname contains 2 or more octets of the IP address, in
+   decimal or hexidecimal form.
+
+
+Same as BOTNET_CLIENTWORDS or BOTNET_SERVERWORDS:
+$cwordexp = '((\b|\d)cable(\b|\d))|((\b|\d)catv(\b|\d))|((\b|\d)ddns(\b|\d))|' .
+            '((\b|\d)dhcp(\b|\d))|((\b|\d)dial-?up(\b|\d))|' .
+            '((\b|\d)dip(\b|\d))|((\b|\d)(a|s|d(yn)?)?dsl(\b|\d))|' .
+            '((\b|\d)dynamic(\b|\d))|((\b|\d)modem(\b|\d))|' .
+            '((\b|\d)ppp(\b|\d))|((\b|\d)res(net|ident(ial)?)?(\b|\d))|' .
+            '((\b|\d)client(\b|\d))|((\b|\d)fixed(\b|\d))|' .
+            '((\b|\d)pool(\b|\d))|((\b|\d)static(\b|\d))|((\b|\d)user(\b|\d))';
+$cwords = Mail::SpamAssassin::Plugin::Botnet::check_words($hostname, $cwordexp);
+
+$swordexp = '((\b|\d)mail(\b|\d))|((\b|\d)mta(\b|\d))|((\b|\d)mx(\b|\d))|' .
+            '((\b|\d)relay(\b|\d))|((\b|\d)smtp(\b|\d))';
+$swords = Mail::SpamAssassin::Plugin::Botnet::check_words($hostname, $swordexp);
+
+   (the above $cwordexp matches the expression sent to the client word check
+   based upon the default Botnet.cf; similarly, the above $swordexp matches
+   the expression sent to the server word check based upon the default
+   Botnet.cf)
+
+   Returns 1 if the hostname matches the regular expression in $cwordexp,
+   or $swordexp, not including within the two right-most domains in $hostname.
+   You must supply the regular expression yourself, and act accordingly to
+   whether or not it is server words or client words.
+
+
+Same as BOTNET_CLIENT:
+$client = ((! $swords) && ($cwords || $iphost));
+OR
+$client = check_client($hostname, $ip, $cwordexp, $swordexp, \$tests)
+
+$tests (optional) will contain the names of which subchecks were triggered:
+   serverwords, clientwords, ipinhostname
+   
+
+Same as BOTNET_SOHO:
+$soho =
+ Mail::SpamAssassin::Plugin::Botnet::check_soho($hostname, $ip, $domain, $helo);
+
+   $domain should be the part after the @ in the sender's email address.
+   $helo doesn't actualy do anything ... and probably wont ever.
+
+
+Same as BOTNET:
+$botnet = ((! $soho) && ($nordns || $baddns || $client));
+OR
+$botnet =
+   Mail::SpamAssassin::Plugin::Botnet::check_botnet($hostname, $ip,
+      $cwordexp, $swordexp, $domain, $helo, \$tests);
+
+$tests (optional) will contain the names of which subchecks were triggered:
+   nordns, badrdns, serverwords, clientwords, ipinhostname, client, soho
+

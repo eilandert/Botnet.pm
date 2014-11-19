@@ -1,0 +1,138 @@
+
+===========================
+Skipping some Botnet checks
+===========================
+
+If you want to skip some Botnet checks, but not all of them, such as
+BOTNET_BADDNS, then you'll need to use the piece-meal rules variation,
+and replace BOTNET and/or BOTNET_CLIENT with meta rules.
+
+
+==========================
+BOTNET as piece-meal rules
+==========================
+
+set the following scores as shown:
+
+score           BOTNET                  0.0
+score           BOTNET_CLIENT           0.0
+
+And set the following scores as you want to weight them (be sure to keep
+BOTNET_SOHO and BOTNET_SERVERWORDS as negateive numbers):
+
+score           BOTNET_SOHO             -0.01
+score           BOTNET_NORDNS           0.01
+score           BOTNET_BADDNS           0.00 0.01 0.00 0.01
+score           BOTNET_IPINHOSTNAME     0.01
+score           BOTNET_CLIENTWORDS      0.01
+score           BOTNET_SERVERWORDS      -0.01
+
+
+============================
+BOTNET_CLIENT as a meta rule
+============================
+
+The old style for these two rules was to do them as meta rules.
+To set this up, replace the following line:
+
+header		BOTNET_CLIENT		eval:botnet_client()
+
+with:
+
+meta		BOTNET_CLIENT	(!BOTNET_SERVERWORDS && (BOTNET_IPINHOSTNAME || BOTNET_CLIENTWORDS)
+
+and, last, set the following scores:
+
+score           BOTNET_IPINHOSTNAME     0.01
+score           BOTNET_CLIENTWORDS      0.01
+score           BOTNET_SERVERWORDS      -0.01
+
+
+=====================
+BOTNET as a meta rule
+=====================
+
+The old style for these two rules was to do them as meta rules.
+To set this up, replace the following line:
+
+header		BOTNET			eval:botnet()
+
+with:
+
+meta		BOTNET	(!BOTNET_SOHO && (BOTNET_CLIENT || BOTNET_BADDNS || BOTNET_NORDNS))
+
+and, last, set the following scores:
+
+score           BOTNET_SOHO             -0.01
+score           BOTNET_NORDNS           0.01
+score           BOTNET_BADDNS           0.00 0.01 0.00 0.01
+score           BOTNET_CLIENT           0.01
+
+
+====================
+DKIM, DK, and/or p0f
+====================
+
+(see above for making BOTNET a meta rule)
+
+From Mark Martinec (using all 3):
+> 
+> ... coupling it with p0f (passive operating system fingerprinting)
+> matching on non-unix hosts seems to bring up the best of both approaches:
+> 
+> meta  BOTNET_W    !DKIM_VERIFIED && !DK_VERIFIED && (L_P0F_WXP ||
+>   L_P0F_W || L_P0F_UNKN) && (BOTNET_CLIENT+BOTNET_BADDNS+BOTNET_NORDNS) > 0
+> score BOTNET_W    3.2
+> 
+> meta  BOTNET_OTHER  !BOTNET_W &&
+>   (BOTNET_CLIENT+BOTNET_BADDNS+BOTNET_NORDNS) > 0
+> score BOTNET_OTHER  0.5
+> 
+> About p0f see:
+>   http://marc.theaimsgroup.com/?l=amavis-user&m=116439276912418
+>   http://marc.theaimsgroup.com/?l=amavis-user&m=116440910822408
+
+
+From Jonas Eckerman (just using p0f):
+> describe        BOTNET                  Relay might be part of botnet
+> meta            BOTNET                  (!BOTNET_SOHO && (BOTNET_CLIENT || BOTNET_BADDNS || BOTNET_NORDNS))
+> score           BOTNET                  2.0
+> 
+> describe        BOTNET_WINDOWS          Windows relay might be part if botnet
+> meta            BOTNET_WINDOWS          (BOTNET && __OS_WINDOWS)
+> score           BOTNET_WINDOWS          1.0
+> 
+> header          __OS_WINDOWS            p0fIP2OS =~ /Windows/i
+
+I personally would suggest not using p0f (there's nothing to prevent a
+linux box from being root-kitted and used as a spambot), and I still stick
+with the idea that 5.0 is a good score for Botnet.  So, my suggestion is:
+
+meta	BOTNET	(!DKIM_VERIFIED && !DK_VERIFIED && !BOTNET_SOHO && (BOTNET_CLIENT || BOTNET_BADDNS || BOTNET_NORDNS))
+
+
+==========================
+Using SPF to exempt Botnet
+==========================
+
+(see above for making BOTNET a meta rule)
+
+You _could_ have the BOTNET meta rule say:
+
+meta	BOTNET	(!SPF_PASS && !DKIM_VERIFIED && !DK_VERIFIED && !BOTNET_SOHO && (BOTNET_CLIENT || BOTNET_BADDNS || BOTNET_NORDNS))
+
+But, some spambot owner could then make a throw-away domain, and give it an
+SPF record that says "+all" or any of a few other mechanisms that evaluate
+to "every host may send mail from this domain".  That essentially makes the
+Botnet checks impotent.
+
+So, I would recommend NOT using SPF as a means of exempting a message from
+the Botnet check.  In order to try to deal with small scale mail servers
+(SOHO, small office/home office) that might be stuck with service from an
+ISP that has terrible DNS policies, I have added the BOTNET_SOHO check.
+It has some limitations, but should work for SOHO mail servers.  Larger
+organizations have other means of dealing with "not looking like a Botnet",
+such as: a) forcing their ISP to do the right thing, b) using a different
+ISP, or c) using a hosted mail server that has good DNS.
+
+

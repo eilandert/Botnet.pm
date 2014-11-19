@@ -720,7 +720,17 @@ sub check_dns {
          }
       }
 
-   $resolver = Net::DNS::Resolver->new();
+      $resolver = Net::DNS::Resolver->new(
+               udp_timeout => 5,
+               tcp_timeout => 5,
+               retrans => 0,
+               retry => 1,
+               persistent_tcp => 0,
+               persistent_udp => 0,
+               dnsrch => 0,
+               defnames => 0,
+       );
+
    if ($query = $resolver->search($name, $type)) {
       # found matches
       $i = 0;
@@ -865,7 +875,17 @@ sub check_hostname {
 sub get_rdns {
    my ($ip) = @_;
    my ($query, @answer, $rr);
-   my $resolver = Net::DNS::Resolver->new();
+   my $resolver = Net::DNS::Resolver->new(
+               udp_timeout => 5,
+               tcp_timeout => 5,
+               retrans => 0,
+               retry => 1,
+               persistent_tcp => 0,
+               persistent_udp => 0,
+               dnsrch => 0,
+               defnames => 0,
+       );
+
    my $name = "";
 
    if ($query = $resolver->query($ip, 'PTR', 'IN')) {

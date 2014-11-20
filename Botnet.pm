@@ -720,7 +720,7 @@ sub check_dns {
          }
       }
 
-      $resolver = Net::DNS::Resolver->new(
+	$resolver = Net::DNS::Resolver->new(
                udp_timeout => 5,
                tcp_timeout => 5,
                retrans => 0,
@@ -729,10 +729,18 @@ sub check_dns {
                persistent_udp => 0,
                dnsrch => 0,
                defnames => 0,
-       );
+        );
 
-   if ($query = $resolver->search($name, $type)) {
-      # found matches
+	if ($query = $resolver->send($name, $type)) {
+	if ($query->header->rcode eq 'SERVFAIL') {
+	 	# avoid FP due to timeout or other error
+ 		return (-1);
+ 	}
+	 if ($query->header->rcode eq 'NXDOMAIN') {
+ 		# found no matches
+ 		return (0);
+ 	}
+ # check for matches
       $i = 0;
       foreach $rr ($query->answer()) {
          $i++;
@@ -760,12 +768,12 @@ sub check_dns {
                }
             }
          }
-      # $ip isn't in the A records for $name at all
+      # found no matches
       return(0);
       }
    else {
-      # the sender leads to a host that doesn't have an A record
-      return (0);
+	 # avoid FP due to timeout or other error
+	 return (-1);
       }
 
    # can't resolve an empty name nor ip that doesn't look like an address

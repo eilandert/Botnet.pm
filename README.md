@@ -1,8 +1,14 @@
-
 This is a SpamAssassin module. Comitted to github for archieving purposes.
-Version 0.8, It has a patched Botnet.pm for IPv6. Works on 3.4.0
-I might pick this one up one day, since the original author seems to have 
-abandonded it.
+
+This is Botnet 0.9b.
+
+Changelog from 0.8 to 0.9beta
+- IPv6 Support
+- Dns timeouts implemented
+- Beter handling of timeouts/nonexisting dns
+
+Altough it doesn't use the latest SA functions, it works on SpamAssassin 3.4.0.
+I might pick this one up one day, since the original author seems to have abandonded it.
 
 
 Botnet looks for possible botnet sources of email by checking

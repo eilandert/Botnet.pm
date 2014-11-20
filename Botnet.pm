@@ -34,7 +34,7 @@ use strict;
 use warnings;
 use vars qw(@ISA);
 @ISA = qw(Mail::SpamAssassin::Plugin);
-my $VERSION = 0.8;
+my $VERSION = 0.9;
 
 
 sub new {
